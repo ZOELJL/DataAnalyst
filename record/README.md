@@ -1,6 +1,8 @@
 # 记录簿
 ## 教程类
 - [pycharm 同步 gitbub](https://blog.csdn.net/john_bian/article/details/94657057)
+- [markdwon手册](http://www.markdown.cn/)
+
 ## 错误类
 
 ## 心得类
