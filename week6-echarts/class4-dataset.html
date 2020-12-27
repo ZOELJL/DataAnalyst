@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="./js/echarts.js"></script>
+</head>
+<body>
+<div id="echartline" style="width: 600px;height: 400px;border: 3px solid red" >你好</div>
+</body>
+<script type="text/javascript">
+    var myEchart = echarts.init(document.getElementById("echartline"))
+    var option ={
+        grid:{left:'10%',right:'20%',bottom:10,top:10},
+        xAxis:{type:'category'},
+        yAxis:{},
+        dataset:{source:[['jan', 34, 20, 'XX', 52],
+                        ['Feb', 28, 14, 'YY', 42],
+                        ['Mar', 33, 22, 'ZZ', 44],
+                        ['Apr', 33, 55],
+                        ['May', 33, 55],
+                        ['Jun', 33, 55],
+                        ['Jul', 33, 10],
+                        ['Aug', 37, 10],
+                        ['Sep', 33, 10],
+                        ['Oct', 33, 13],
+                        ['Nov', 33, 10],
+                        ['Dce', 33, 15],]},
+        series:[{type:'line',encode:{x:0,y:1}},
+            {type:'bar',encode:{x:0,y:2}},
+            {type:'pie',center:['70%','20%'],radius:35,encode:{itemName:3,value:4}},
+        ]
+
+    }
+    myEchart.setOption(option)
+</script>
+</html>
