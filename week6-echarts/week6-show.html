@@ -3,105 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <title>作业展示</title>
-<!--    <script src="https://code.jquery.com/jquery-3.5.1.js"></script>-->
+    <script src="./js/jquery-3.5.1.js"></script>
     <script src="./js/echarts.js"></script>
-
-
-
 </head>
 <body>
-<div id="showbox" style="width:600px; height:400px;border: #3388ff solid "></div>
+<div id="showbox" style="width:1200px; height:600px;margin-left:100px ;border: #3388ff solid "></div>
 
 </body>
 <script type="text/javascript">
+    var userEchart = echarts.init(document.getElementById("showbox"));
+    $.get('UserData.json', function (data){
+            userEchart.setOption({
+                title: {
+                    text: '用户转化数据',
+                    subtext: '多方面展示用户数据',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'item',
+                    formatter: '{a} <br/>{b} : {c} '
+                },
+                legend: {
+                    left: 'center',
+                    top: 'bottom',
+                    data: ['流失用户','回流用户','连续活跃用户','新用户','活跃用户']
+                },
 
-    var userEchart = echarts.init(document.getElementById("showbox"))
-
-
-    var option = {
-    title: {
-        text: '漏斗图',
-        subtext: '纯属虚构'
-    },
-    tooltip: {
-        trigger: 'item',
-        formatter: "{a} <br/>{b} : {c}%"
-    },
-    toolbox: {
-        feature: {
-            dataView: {readOnly: false},
-            restore: {},
-            saveAsImage: {}
-        }
-    },
-    legend: {
-        data: ['展现','点击','访问','咨询','订单']
-    },
-    series: [
-        {
-            name: '预期',
-            type: 'funnel',
-            left: '10%',
-            width: '80%',
-            label: {
-                formatter: '{b}预期'
-            },
-            labelLine: {
-                show: false
-            },
-            itemStyle: {
-                opacity: 0.7
-            },
-            emphasis: {
-                label: {
-                    position: 'inside',
-                    formatter: '{b}预期: {c}%'
-                }
-            },
-            data: [
-                {value: 60, name: '访问'},
-                {value: 40, name: '咨询'},
-                {value: 20, name: '订单'},
-                {value: 80, name: '点击'},
-                {value: 100, name: '展现'}
-            ]
-        },
-        {
-            name: '实际',
-            type: 'funnel',
-            left: '10%',
-            width: '80%',
-            maxSize: '80%',
-            label: {
-                position: 'inside',
-                formatter: '{c}%',
-                color: '#fff'
-            },
-            itemStyle: {
-                opacity: 0.5,
-                borderColor: '#fff',
-                borderWidth: 2
-            },
-            emphasis: {
-                label: {
-                    position: 'inside',
-                    formatter: '{b}实际: {c}%'
-                }
-            },
-            data: [
-                {value: 30, name: '访问'},
-                {value: 10, name: '咨询'},
-                {value: 5, name: '订单'},
-                {value: 50, name: '点击'},
-                {value: 80, name: '展现'}
-            ]
-        }
-    ]
-};
-
-
-
-    userEchart.setOption(option)
+                series: [
+                    {
+                    name:'用户转化',
+                    type:'funnel',
+                    left: '5%',
+                    top: 60,
+                    //x2: 80,
+                    bottom: 60,
+                    width: '40%',
+                    // height: {totalHeight} - y - y2,
+                    min: 0,
+                    max: 10000,
+                    // minSize: '0%',
+                    // maxSize: '100%',
+                    sort: 'descending',
+                    gap: 2,
+                    label: {
+                        show: true,
+                        position: 'inside'
+                    },
+                    labelLine: {
+                        length: 10,
+                        lineStyle: {
+                            width: 1,
+                            type: 'solid'
+                        }
+                    },
+                    itemStyle: {
+                        borderColor: '#fff',
+                        borderWidth: 1
+                    },
+                    emphasis: {
+                        label: {
+                            fontSize: 20
+                        }
+                    },
+                    data: data.data
+                },
+                    {
+                        name: '用户数据',
+                        type: 'pie',
+                        radius: [50, 150],
+                        center: ['75%', '50%'],
+                        roseType: 'area',
+                        data: data.data
+                    }
+                ]
+            })
+    },'json')
 
 </script>
 </html>
