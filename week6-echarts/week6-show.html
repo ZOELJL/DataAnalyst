@@ -12,6 +12,7 @@
 </body>
 <script type="text/javascript">
     var userEchart = echarts.init(document.getElementById("showbox"));
+
     $.get('UserData.json', function (data){
             userEchart.setOption({
                 title: {
