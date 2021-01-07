@@ -8,13 +8,92 @@ import shutil
 import pandas as pd
 from sqlalchemy import create_engine
 import threading
+from pathlib import Path
 
+## 解压文件  并同步写入状态
+def unzipfile(filename):
+    filepath = './unpackedtest'
+    ## 如果解压文件夹不存在就创建，如果存在就先清空再创建
+   #shutil.rmtree(filepath)
+    if not os.path.exists(filepath):
+        os.mkdir(filepath)
+    else:
+        shutil.rmtree(filepath)
+        os.mkdir(filepath)
+
+    filecontents = zipfile.ZipFile('./savefiles/%s' % filename, 'r')
+    print(filecontents.namelist())
+    for file in filecontents.namelist():
+        try:
+            print(file)
+            newname = file.encode('cp437').decode('gbk')
+            print(newname)
+            filecontents.extract(file, '{}/{}'.format(filepath, filename))
+            file = '%s/%s/%s' % (filepath, filename, file)
+            newname = '%s/%s/%s' % (filepath, filename, newname)
+            os.rename(file, newname)
+        except:
+            print('该文件解压失败->',filename)
+            continue
+    # 多线程
+    t2 = threading.Thread(target=write_status, args=([filename]))
+    t2.setDaemon(False)
+    t2.start()
+
+# 解压文件  并同步写入状态
+def unzipfile_forpath(fn):
+    filename = '%s.zip'%fn
+    filepath = './unpackedtest'
+    ##
+# 如果解压文件夹不存在就创建，如果存在就先清空再创建
+   #shutil.rmtree(filepath)
+    if not os.path.exists(filepath):
+        os.mkdir(filepath)
+    else:
+        shutil.rmtree(filepath)
+        os.mkdir(filepath)
+    #
+    # filecontents = zipfile.ZipFile('./savefiles/%s' % filename, 'r')
+    # print(filecontents.namelist())
+    with zipfile.ZipFile('./savefiles/%s' % filename, 'r') as f:
+        for file in f.namelist():
+            extracted_path = Path(f.extract(file,'{}/{}'.format(filepath, fn)))
+            print(file)
+
+            newfile = file.encode('cp437').decode('gbk')
+            newfile = '{}/{}/{}'.format(filepath, fn,newfile)
+            print(newfile)
+            extracted_path.rename(newfile)
+
+    # 多线程
+    # t2 = threading.Thread(target=write_status, args=([filename]))
+    # t2.setDaemon(False)
+    # t2.start()
+
+
+
+
+# 写入状态
+def write_status(filename):
+    status = re.match('(\w){4}',filename).group()
+    writein = open('./unpackedtest/%s/status.txt'%filename,'w')
+    writein.write(status)
+    writein.close()
+
+
+
+# 爬取数据 并同步解压
 def spider(begin):
-    try:
-        os.mkdir('./savefiles')  # 创建文件夹存放下载的招标文件
-    except:
-        print('已经存在，不需要重复创建')
-
+    # try:
+    #     os.mkdir('./savefiles')  # 创建文件夹存放下载的招标文件
+    # except:
+    #     print('已经存在，不需要重复创建')
+    filepath = './savefiles'
+    if not os.path.exists(filepath):
+        os.mkdir(filepath)
+    else:
+        shutil.rmtree(filepath)
+        os.mkdir(filepath)
     # 设置计数变量
     globalf = 0
     globalg = 0
@@ -22,9 +101,7 @@ def spider(begin):
     # 循环页码
     for i in range(begin, 3):
         url = 'http://ecp.sgcc.com.cn/ecp1.0/project_list.jsp?site=global&column_code=014001001&project_type=%d' % i
-        header = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36'
-        }
+        header = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 11_1_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.88 Safari/537.36'}
         response = requests.get(url=url, headers=header)
         xpathtree = etree.HTML(response.text)
         res = xpathtree.xpath('//tr[@align="left"]')
@@ -50,81 +127,25 @@ def spider(begin):
                 downloadurl = originalurl + url3
             except:
                 print('本页面有问题', url2)
-
             try:
                 urllib.request.urlretrieve(url=downloadurl, filename='./savefiles/%s.zip' % projectname)
                 globalf += 1
                 locala += 1
                 # 多线程进行解压
-                t1 = threading.Thread(target=unzipfile,args=([projectname]))
+                filename = '{}.zip'.format(projectname)
+                t1 = threading.Thread(target=unzipfile,args=([filename]))
                 t1.setDaemon(False)
                 t1.start()
-
             except:
                 globalg += 1
                 print('这个地址下载失败', downloadurl)
                 continue  # 下载失败则跳过 继续下载
-        print('第%d页下载成功%d份标书' %(i, locala))
+        #print('第%d页下载成功%d份标书' %(i, locala))
         print('第%d页下载完成' % i)
-        print('截止此刻下载成功%d份标书' % globalf)
-
+        #print('截止此刻下载成功%d份标书' % globalf)
         print('全部下载成功文件数量：', globalf)
         print('全部下载失败文件数量：', globalg)
 
-## 解压文件
-def unzipfile():
-    filepath = './unpacked'
-    ## 如果解压文件夹不存在就创建，如果存在就先清空再创建
-   #shutil.rmtree(filepath)
-    if not os.path.exists(filepath):
-        os.mkdir(filepath)
-    else:
-        shutil.rmtree(filepath)
-        os.mkdir(filepath)
-    failnum = 0
-    sucessnum = 0
-    for zipfiles in os.listdir('./savefiles'):
-        if not zipfiles.startswith('.'):  # 排除隐藏文件
-            filedirectory = re.search('(.*?).zip', zipfiles).group(1)
-            print(filedirectory)
-            filecontents = zipfile.ZipFile('./savefiles/%s' % zipfiles, 'r')
-            for file in filecontents.namelist():
-                # if not os.path.isfile(file):
-                #     print(file)
-                try:
-                    print(file)
-                    newname = file.encode('cp437').decode('gbk')
-                    print(newname)
-                    filecontents.extract(file, '{}/{}' .format(filepath,filedirectory) )
-                    file = '%s/%s/%s' % (filepath,filedirectory, file)
-                    newname = '%s/%s/%s' % (filepath,filedirectory, newname)
-                    os.rename(file,newname)
-                    sucessnum += 1
-                except:
-                    failnum +=1
-                    print('这个文件解压失败 {}'.format(zipfiles))
-                    continue
-            # 多线程
-            t2 = threading.Thread(target=write_status, args=([projectname]))
-            t2.setDaemon(False)
-            t2.start()
-
-    print("失败解压文件数：%d"%failnum)
-    print("成功解压文件数：%d"%sucessnum)
-
-# 写入状态
-def write_status():
-    listdir = []
-    for hide in os.listdir('./unpacked'):
-        if not hide.startswith('.'):
-            listdir.append(hide)
-    print(listdir)
-    for char in listdir:
-        status = re.match('(\w){4}',char).group()
-        print(status)
-        writein = open('./unpacked/%s/status.txt'%char,'w')
-        writein.write(status)
-        writein.close()
 
 # 将状态写入货物清单
 def write_list():
@@ -182,11 +203,8 @@ def save_sql():
 
 
 if __name__ == "__main__":
-    # print("准备爬取电网招标文书。")
-    # start = input("请输入爬取起始页码：")
-    # spider(int(start))
-    #unzipfile()
-    #write_status()
-    write_list()
+    filename1 = '已经截标国网福建省电力有限公司福建南平太阳电缆股份有限公司10MW分布式光伏发电项目配套物资采购'
+    filename = '已经截标国网信息通信产业集团有限公司2020年第三批集中采购项目公开招标（物资）'
+    unzipfile_forpath(filename)
 
 
