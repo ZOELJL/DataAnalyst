@@ -9,6 +9,9 @@ import pandas as pd
 from sqlalchemy import create_engine
 import threading
 from pathlib import Path
+import pymysql
+pymysql.install_as_MySQLdb()
+import mysql.connector
 
 ## 解压文件  并同步写入状态
 def unzipfile(filename):
@@ -187,24 +190,23 @@ def write_list():
     #print(df3.info())
     # 去除 包号列的空值的数据
     df4 = df3.dropna(subset=['包号'])
-    print(df4.info())
+    print(df4)
     # 数据写入csv文件，保存在本地
-    df4.to_csv('test.csv')
+    #df4.to_csv('test.csv')
     # 数据存入数据库
 
-    cur = create_engine('mysql://root:123456@localhost/test?charset=utf-8').connect()
-    df4.to_sql(name='df4', con=cur)
+    cur = create_engine('mysql://root:123456@localhost/spider?charset=utf8').connect()
+    df4.to_sql(name='df4', con=cur,index=False,if_exists='append')
 
-# 保存
-def save_sql():
-    cur = create_engine('mysql://root:123456@localhost/test?charset=utf-8').connect()
-    df4.to_sql(name='df4',con=cur)
+
 
 
 
 if __name__ == "__main__":
     filename1 = '已经截标国网福建省电力有限公司福建南平太阳电缆股份有限公司10MW分布式光伏发电项目配套物资采购'
     filename = '已经截标国网信息通信产业集团有限公司2020年第三批集中采购项目公开招标（物资）'
-    unzipfile_forpath(filename)
+    #unzipfile_forpath(filename)
+    write_list()
+
 
 
