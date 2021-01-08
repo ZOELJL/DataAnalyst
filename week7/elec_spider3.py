@@ -14,77 +14,47 @@ pymysql.install_as_MySQLdb()
 import mysql.connector
 
 ## 解压文件  并同步写入状态
-def unzipfile(filename):
-    filepath = './unpacked'
-    ## 如果解压文件夹不存在就创建，如果存在就先清空再创建
-   #shutil.rmtree(filepath)
-    # if not os.path.exists(filepath):
-    #     os.mkdir(filepath)
-    # else:
-    #     shutil.rmtree(filepath)
-    #     os.mkdir(filepath)
-    filecontents = zipfile.ZipFile('./savefiles/%s.zip' % filename, 'r')
-    #print(filecontents.namelist())
-    for file in filecontents.namelist():
-        try:
-            #print(file)
-            newname = file.encode('cp437').decode('gbk')
-            #print(newname)
-            filecontents.extract(file, '{}/{}'.format(filepath, filename))
-            file = '%s/%s/%s' % (filepath, filename, file)
-            newname = '%s/%s/%s' % (filepath, filename, newname)
-            os.rename(file, newname)
-        except:
-            print('该文件解压失败->',filename)
-            continue
-    # 多线程
-    t2 = threading.Thread(target=write_status, args=([filename]))
-    t2.setDaemon(False)
-    t2.start()
-
-# 解压文件  并同步写入状态
-def unzipfile_forpath(fn):
-    filename = '%s.zip'%fn
-    filepath = './unpackedtest'
-    ##
-# 如果解压文件夹不存在就创建，如果存在就先清空再创建
-   #shutil.rmtree(filepath)
-    if not os.path.exists(filepath):
-        os.mkdir(filepath)
-    else:
-        shutil.rmtree(filepath)
-        os.mkdir(filepath)
-    #
-    # filecontents = zipfile.ZipFile('./savefiles/%s' % filename, 'r')
-    # print(filecontents.namelist())
-    with zipfile.ZipFile('./savefiles/%s' % filename, 'r') as f:
-        for file in f.namelist():
-            extracted_path = Path(f.extract(file,'{}/{}'.format(filepath, fn)))
-            print(file)
-
-            newfile = file.encode('cp437').decode('gbk')
-            newfile = '{}/{}/{}'.format(filepath, fn,newfile)
-            print(newfile)
-            extracted_path.rename(newfile)
-
-    # 多线程
-    # t2 = threading.Thread(target=write_status, args=([filename]))
-    # t2.setDaemon(False)
-    # t2.start()
+def unzipfile():
+    filepath = './unpackedfile'
+    ## 创建解压存放的文件夹
+    os.mkdir(filepath)
+    failnum = 0
+    sucessnum = 0
+    for zipfiles in os.listdir('./savefiles'):
+        if not zipfiles.startswith('.'):  # 排除隐藏文件
+            filedirectory = re.search('(.*?).zip', zipfiles).group(1)
+            filecontents = zipfile.ZipFile('./savefiles/%s' % zipfiles, 'r')
+            for file in filecontents.namelist():
+                try:
+                    # 解决解压文件中文乱码
+                    newname = file.encode('cp437').decode('gbk')
+                    filecontents.extract(file, '{}/{}'.format(filepath, filedirectory))
+                    file = '%s/%s/%s' % (filepath, filedirectory, file)
+                    newname = '%s/%s/%s' % (filepath, filedirectory, newname)
+                    os.rename(file, newname)
+                    sucessnum += 1
+                except:
+                    failnum += 1
+                    print('该文件解压失败->',zipfiles)
+                    continue
+            # 多线程写入状态
+            t2 = threading.Thread(target=write_status, args=([filedirectory]))
+            t2.setDaemon(False)
+            t2.start()
+    print("失败解压文件数：%d" % failnum)
+    print("成功解压文件数：%d" % sucessnum)
 
 
 # 写入状态
 def write_status(filename):
     status = re.match('(\w){4}',filename).group()
-    writein = open('./unpacked/%s/status.txt'%filename,'w')
+    writein = open('./unpackedfile/%s/status.txt'%filename,'w')
     writein.write(status)
     writein.close()
 
-
-
-# 将状态写入货物清单
+# 合并所有文件为一张表，并且写入数据库
 def write_list(type):
-    filepath = './unpacked'
+    filepath = './unpackedfile'
     listdir = []
     dataframe = []
     for hide in os.listdir(filepath):
@@ -106,20 +76,17 @@ def write_list(type):
                         for col in list(sheetall.parse(sheet_name=sheet).columns):
                             if 'Unnamed' in col :
                                 colnum +=1
-                        #print(colnum)
                         # 如果含有Unamed的空列数量 大于3 就略过第一行，取第二行作为表头，否则取第一行作为表头
                         if  colnum >3 :
                             df = sheetall.parse(sheet_name=sheet,skiprows=1)
                         else:
                             df = sheetall.parse(sheet_name=sheet)
-                        #print(df.columns)
                         df['项目状态'] = sta
                         dataframe.append(df)
     dataall = pd.concat(dataframe)
     print(len(dataall.columns))
     col = ['包号','网省采购申请行号','项目单位','需求单位','项目名称','工程电压等级','物资名称','物资描述','单位','数量','交货日期','交货地点','备注','技术规范ID','项目状态']
     df3 = dataall[col]
-    #print(df3.info())
     # 去除 包号列的空值的数据
     df4 = df3.dropna(subset=['包号'])
     print(df4.info())
@@ -181,12 +148,6 @@ def spider(begin):
                 urllib.request.urlretrieve(url=downloadurl, filename='./savefiles/%s.zip' % projectname)
                 globalf += 1
                 locala += 1
-                # 多线程进行解压
-                #filename = '{}.zip'.format(projectname)
-                unzipfile(filename)
-                # t1 = threading.Thread(target=unzipfile,args=([filename]))
-                # t1.setDaemon(False)
-                # t1.start()
             except:
                 globalg += 1
                 print('这个地址下载失败', downloadurl)
@@ -196,24 +157,20 @@ def spider(begin):
         #print('截止此刻下载成功%d份标书' % globalf)
         print('全部下载成功文件数量：', globalf)
         print('全部下载失败文件数量：', globalg)
+    # 数据全部下载之后，再开始解压
+    print("数据下载完毕，现在开始解压。")
+    unzipfile()
     # 数据爬取解压完成后，合并
+    print("数据解压完毕，现在开始处理并存储。")
     way = input("请选择最终数据存储方式：1 csv文件； 2 mysql 数据库 ")
     write_list(way)
     print("数据处理完毕")
 
 
-
-
-
-
-
-
 if __name__ == "__main__":
-    filename1 = '已经截标国网福建省电力有限公司福建南平太阳电缆股份有限公司10MW分布式光伏发电项目配套物资采购'
-    filename = '已经截标国网信息通信产业集团有限公司2020年第三批集中采购项目公开招标（物资）'
-    #unzipfile_forpath(filename)
     begin = input("请输入起始页码： ")
     spider(int(begin))
+    #unzipfile()
 
 
 
